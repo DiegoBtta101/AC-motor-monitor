@@ -16,7 +16,7 @@ BUFFER_SIZE = 1000
 RECONECTAR  = True
 CSV_FILENAME = "registro_MOTOR.csv" 
 
-VENTANA_SEG = 5.0  # <-- NUEVO: Segundos máximos a mostrar en las gráficas
+VENTANA_SEG = 5.0  # <-- Segundos máximos a mostrar en las gráficas
 
 # Umbrales ISO 2372
 THR_GOOD    = 0.05
@@ -104,8 +104,8 @@ gs = gridspec.GridSpec(3, 3, figure=fig,
                        left=0.07, right=0.97,
                        top=0.92,  bottom=0.08)
 
-ax_vib  = fig.add_subplot(gs[0, :])   
-ax_x    = fig.add_subplot(gs[1, :])   
+# <-- NUEVO: Una sola gráfica principal ocupando las filas 0 y 1 enteras
+ax_main = fig.add_subplot(gs[0:2, :])   
 ax_rpm  = fig.add_subplot(gs[2, 0])   
 ax_iso  = fig.add_subplot(gs[2, 1])   
 ax_hist = fig.add_subplot(gs[2, 2])   
@@ -113,47 +113,48 @@ ax_hist = fig.add_subplot(gs[2, 2])
 # Colores
 C_VIB  = "#00e5ff"
 C_X    = "#76ff03"
-C_Y    = "#ffea00"
 C_GRID = "#1a1a1a"
 
-for ax in [ax_vib, ax_x, ax_rpm]:
+for ax in [ax_main, ax_rpm]:
     ax.set_facecolor("#111111")
     ax.grid(True, color=C_GRID, linewidth=0.5)
     ax.tick_params(colors="#aaaaaa", labelsize=8)
     for spine in ax.spines.values():
         spine.set_edgecolor("#333333")
     
-    # <-- NUEVO: Fijamos los límites X desde el inicio para que no auto-escalen
+    # Fijamos los límites X desde el inicio para que no auto-escalen
     ax.set_xlim(-VENTANA_SEG, 0)
 
 ax_iso.set_facecolor("#111111")
 ax_hist.set_facecolor("#111111")
 
 # Títulos
-ax_vib.set_title("Vibración RMS (XY)", color="#cccccc", fontsize=9, pad=4)
-ax_x.set_title("Señal filtrada — Eje X",  color="#cccccc", fontsize=9, pad=4)
+ax_main.set_title("Señal filtrada (Eje X) con Umbrales ISO", color="#cccccc", fontsize=10, pad=6)
 ax_rpm.set_title("RPM",                   color="#cccccc", fontsize=9, pad=4)
 ax_iso.set_title("Estado ISO 2372",       color="#cccccc", fontsize=9, pad=4)
 ax_hist.set_title("Distribución VIB",     color="#cccccc", fontsize=9, pad=4)
 
-ax_vib.set_ylabel("g", color="#aaaaaa", fontsize=8)
-ax_x.set_ylabel("g",   color="#aaaaaa", fontsize=8)
+ax_main.set_ylabel("g", color="#aaaaaa", fontsize=8)
 ax_rpm.set_ylabel("RPM", color="#aaaaaa", fontsize=8)
 
-# Líneas iniciales (Añadimos RPM aquí para optimizar)
-line_vib, = ax_vib.plot([], [], color=C_VIB,  lw=1.2, label="RMS")
-line_x,   = ax_x.plot([],   [], color=C_X,    lw=1.0, label="filtX")
-line_rpm, = ax_rpm.plot([], [], color="#ff6d00", lw=1.2) # <-- NUEVO: Línea RPM pre-creada
+# Líneas iniciales
+line_x,   = ax_main.plot([],   [], color=C_X,    lw=1.0, label="filtX")
+line_rpm, = ax_rpm.plot([], [], color="#ff6d00", lw=1.2) 
 
-# Zonas ISO en ax_vib
-ax_vib.axhspan(0,         THR_GOOD,  alpha=0.08, color="green")
-ax_vib.axhspan(THR_GOOD,  THR_SAT,   alpha=0.08, color="yellow")
-ax_vib.axhspan(THR_SAT,   THR_UNSAT, alpha=0.08, color="orange")
-ax_vib.axhspan(THR_UNSAT, 1.0,       alpha=0.08, color="red")
-ax_vib.set_ylim(0, 0.5)
+# <-- NUEVO: Zonas ISO simétricas en la gráfica principal (positivas y negativas)
+# Positivas
+ax_main.axhspan(0,         THR_GOOD,  alpha=0.08, color="green")
+ax_main.axhspan(THR_GOOD,  THR_SAT,   alpha=0.08, color="yellow")
+ax_main.axhspan(THR_SAT,   THR_UNSAT, alpha=0.08, color="orange")
+ax_main.axhspan(THR_UNSAT, 1.0,       alpha=0.08, color="red")
+# Negativas
+ax_main.axhspan(-THR_GOOD, 0,          alpha=0.08, color="green")
+ax_main.axhspan(-THR_SAT,  -THR_GOOD,  alpha=0.08, color="yellow")
+ax_main.axhspan(-THR_UNSAT,-THR_SAT,   alpha=0.08, color="orange")
+ax_main.axhspan(-1.0,      -THR_UNSAT, alpha=0.08, color="red")
 
-ax_x.set_ylim(-0.4, 0.4)
-ax_x.axhline(0, color="#333333", lw=0.5)
+ax_main.set_ylim(-0.4, 0.4) # Limite fijo en Y (Ajustable si la vibración es más fuerte)
+ax_main.axhline(0, color="#333333", lw=0.8) # Línea central en cero
 
 # Gauge ISO
 txt_iso = ax_iso.text(0.5, 0.5, "---",
@@ -184,7 +185,7 @@ def color_iso(v):
 def actualizar(frame):
     with lock:
         if len(buf_tiempo) < 2:
-            return line_vib, line_x, line_rpm
+            return line_x, line_rpm
 
         t    = np.array(buf_tiempo)
         vib  = np.array(buf_vib)
@@ -194,29 +195,26 @@ def actualizar(frame):
     # Tiempo relativo al último punto
     t_rel = t - t[-1]
 
-    # <-- NUEVO: Filtramos los arreglos para mantener SÓLO los últimos 5 segundos
+    # Filtramos los arreglos para mantener SÓLO los últimos 5 segundos
     mascara = t_rel >= -VENTANA_SEG
     t_rel_5s = t_rel[mascara]
     vib_5s   = vib[mascara]
     fx_5s    = fx[mascara]
     rpms_5s  = rpms[mascara]
-
-    # Gráfica VIB RMS
-    line_vib.set_data(t_rel_5s, vib_5s)
     
-    # Gráfica eje X
+    # Gráfica eje X (Gráfica única principal)
     line_x.set_data(t_rel_5s, fx_5s)
     
-    # <-- NUEVO: Gráfica RPM (Optimizado, sin usar cla() que congela la pantalla)
+    # Gráfica RPM 
     line_rpm.set_data(t_rel_5s, rpms_5s)
     
-    # Ajuste dinámico de la altura del eje Y para RPM basado en los datos recientes
+    # Ajuste dinámico de la altura del eje Y para RPM 
     if len(rpms_5s) > 0:
         rpm_min, rpm_max = np.min(rpms_5s), np.max(rpms_5s)
         margen = max(10, (rpm_max - rpm_min) * 0.1)
         ax_rpm.set_ylim(rpm_min - margen, rpm_max + margen)
 
-    # Histograma (Usando solo los datos de los últimos 5 segundos)
+    # Histograma (Seguimos usando VIB para el historial)
     ax_hist.cla()
     ax_hist.set_facecolor("#111111")
     ax_hist.hist(vib_5s, bins=30, color=C_VIB, alpha=0.7, edgecolor="none")
@@ -243,8 +241,7 @@ def actualizar(frame):
         txt_estado.set_text(f"○ {estado_ws['ultimo']} — reintentando...")
         txt_estado.set_color("#ff5555")
 
-    # Retornar los objetos actualizados permite a FuncAnimation optimizar el render
-    return line_vib, line_x, line_rpm
+    return line_x, line_rpm
 
 
 # ─── Main ───────────────────────────────────────────────────────────────────
