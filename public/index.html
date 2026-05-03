@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibSensor - Monitoreo Motor AC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'dashboard-bg': '#111827',
+                        'dashboard-card': '#1f2937',
+                        'dashboard-border': '#374151',
+                        'accent-blue': '#3b82f6',
+                        'accent-green': '#10b981',
+                        'accent-yellow': '#f59e0b',
+                        'accent-red': '#ef4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-dashboard-bg text-gray-100 font-sans min-h-screen flex flex-col">
+    
+    <!-- Navbar -->
+    <nav class="bg-dashboard-card border-b border-dashboard-border px-6 py-4 flex items-center justify-between shadow-lg">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-accent-blue to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white">VibSensor</h1>
+                <p class="text-xs text-gray-500">Monitor de Vibración AC</p>
+            </div>
+        </div>
+        
+        <!-- Pestañas -->
+        <div class="flex gap-2 bg-dashboard-bg rounded-xl p-1.5 border border-dashboard-border">
+            <button id="tab-vivo" class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 bg-gradient-to-r from-accent-blue to-blue-600 text-white shadow-lg shadow-blue-500/25">
+                Monitoreo en Vivo
+            </button>
+            <button id="tab-historico" class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-dashboard-card">
+                Análisis Histórico
+            </button>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal con Grid: 75% - 25% -->
+    <main class="flex-1 p-4 grid grid-cols-12 gap-4">
+        
+        <!-- Área Principal - Gráfica (75%) -->
+        <section class="col-span-9 flex flex-col">
+            <div id="grafica-principal" class="flex-1 bg-dashboard-card rounded-2xl border border-dashboard-border p-6 shadow-xl shadow-black/20 relative overflow-hidden">
+                <!-- Decoración de esquina -->
+                <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-accent-blue/5 to-transparent rounded-bl-3xl"></div>
+                
+                <!-- Grid de fondo sutil -->
+                <div class="absolute inset-0 opacity-10" style="background-image: linear-gradient(rgba(59,130,246,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.3) 1px, transparent 1px); background-size: 40px 40px;"></div>
+                
+                <div class="relative z-10 h-full flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-dashboard-border/50 flex items-center justify-center">
+                            <svg class="w-10 h-10 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                            </svg>
+                        </div>
+                        <p class="text-lg font-medium text-gray-300">Gráfica en Tiempo Real</p>
+                        <p class="text-sm text-gray-500 mt-1">Waveform de vibración</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel Lateral (25%) -->
+        <aside class="col-span-3 flex flex-col gap-4">
+            
+            <!-- RPM Actuales - Tarjeta Premium -->
+            <div class="bg-dashboard-card rounded-2xl border border-dashboard-border p-6 shadow-xl shadow-black/20">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-2 h-2 rounded-full bg-accent-blue"></div>
+                    <h3 class="text-gray-400 text-xs uppercase tracking-widest font-semibold">RPM Actuales</h3>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span id="rpm-valor" class="text-6xl font-bold bg-gradient-to-r from-accent-blue to-cyan-400 bg-clip-text text-transparent">0</span>
+                    <span class="text-gray-500 text-lg font-medium">rpm</span>
+                </div>
+                <!-- Barra de progreso RPM -->
+                <div class="mt-4 h-2 bg-dashboard-border rounded-full overflow-hidden">
+                    <div id="rpm-bar" class="h-full bg-gradient-to-r from-accent-blue to-cyan-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Indicador ISO 2372 - Tarjeta Premium -->
+            <div class="bg-dashboard-card rounded-2xl border border-dashboard-border p-6 shadow-xl shadow-black/20 flex-1">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-2 h-2 rounded-full bg-accent-green"></div>
+                    <h3 class="text-gray-400 text-xs uppercase tracking-widest font-semibold">Estado ISO 2372</h3>
+                </div>
+                
+                <!-- Gauge Circular -->
+                <div class="relative w-48 h-48 mx-auto">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                        <!-- Círculo de fondo -->
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#374151" stroke-width="10"/>
+                        <!-- Arco de fondo (tres zonas) -->
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#22c55e" stroke-width="10" stroke-dasharray="52.3 157" stroke-dashoffset="0" opacity="0.3"/>
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#f59e0b" stroke-width="10" stroke-dasharray="52.3 157" stroke-dashoffset="-52.3" opacity="0.3"/>
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#ef4444" stroke-width="10" stroke-dasharray="52.3 157" stroke-dashoffset="-104.6" opacity="0.3"/>
+                        <!-- Indicador de progreso -->
+                        <circle id="gauge-indicator" cx="60" cy="60" r="50" fill="none" stroke="#22c55e" stroke-width="10" 
+                                stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"/>
+                    </svg>
+                    <!-- Valor central -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="iso-valor" class="text-4xl font-bold text-white">0.0</span>
+                        <span class="text-sm text-gray-500 mt-1">mm/s</span>
+                    </div>
+                </div>
+                
+                <!-- Leyenda de zonas -->
+                <div class="mt-5 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span><span class="text-gray-300">Bueno</span></span>
+                        <span class="text-gray-500">&lt; 4.5</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span><span class="text-gray-300">Aceptable</span></span>
+                        <span class="text-gray-500">4.5 - 7.1</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span><span class="text-gray-300">Dañino</span></span>
+                        <span class="text-gray-500">7.1 - 11.2</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span><span class="text-gray-300">Peligroso</span></span>
+                        <span class="text-gray-500">&gt; 11.2</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado de Conexión -->
+            <div class="bg-dashboard-card rounded-2xl border border-dashboard-border p-4 shadow-xl shadow-black/20">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div id="connection-dot" class="w-3.5 h-3.5 rounded-full bg-gray-500 ring-2 ring-dashboard-card"></div>
+                        <span id="connection-status" class="text-sm font-medium text-gray-400">Desconectado</span>
+                    </div>
+                    <span class="text-xs text-gray-600 font-mono">v1.0</span>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
