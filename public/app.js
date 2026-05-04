@@ -49,6 +49,30 @@ let historicalDataRaw = [];
 // INICIALIZACIÓN DE GRÁFICAS
 // ==========================================
 
+const drawIsoZones = (u) => {
+    const ctx = u.ctx;
+    const { left, top, width, height } = u.bbox;
+
+    const paintZone = (yMin, yMax, color) => {
+        const y1 = u.valToPos(yMax, 'y', true);
+        const y2 = u.valToPos(yMin, 'y', true);
+        ctx.fillStyle = color;
+        ctx.fillRect(left, y1, width, y2 - y1);
+    };
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, width, height);
+    ctx.clip();
+
+    paintZone(0, 4.5, "rgba(34, 197, 94, 0.25)");   // Verde (Bueno) - Mayor opacidad y resalte
+    paintZone(4.5, 7.1, "rgba(255, 235, 59, 0.25)"); // Amarillo (Alerta) - Se mantiene
+    paintZone(7.1, 11.2, "rgba(245, 101, 31, 0.35)"); // Naranja (Peligro) - Se mantiene
+    paintZone(11.2, 20, "rgba(220, 38, 38, 0.35)");   // Rojo (Inaceptable) - Mayor intensidad para peligro crítico
+
+    ctx.restore();
+};
+
 function initVivoChart() {
     graficaContenedorVivo.innerHTML = '';
     const rectVivo = graficaContenedorVivo.getBoundingClientRect();
@@ -59,20 +83,26 @@ function initVivoChart() {
         scales: { x: { time: false }, y: { range: [0, 20] } },
         series: [{}, { stroke: "#10b981", width: 2, points: { show: false } }],
         axes: [
-            { 
-                grid: { stroke: "#374151" }, 
-                stroke: "#9ca3af", 
-                label: "Tiempo (s)", value: (u, v) => v.toFixed(1) + "s",
-                labelSize: 30 
-            }, 
-            { 
-                grid: { stroke: "#374151" }, 
-                stroke: "#9ca3af", 
-                label: "Amplitud (mm/s)", 
-                labelSize: 40 
+            {
+                grid: { stroke: "#374151" },
+                stroke: "#9ca3af",
+                label: "Tiempo (s)",
+                font: "18px sans-serif",
+                labelFont: "bold 16px sans-serif",
+                size: 50,
+                value: (u, v) => v.toFixed(1) + "s",
+            },
+            {
+                grid: { stroke: "#374151" },
+                stroke: "#9ca3af",
+                label: "Amplitud (mm/s)",
+                font: "18px sans-serif",
+                labelFont: "bold 16px sans-serif",
+                size: 70,
             }
         ],
-        cursor: { show: false }
+        cursor: { show: false },
+        hooks: { drawClear: [drawIsoZones] }
     };
     window.uplotVivo = new uPlot(optsVivo, chartDataVivo, graficaContenedorVivo);
 }
@@ -87,20 +117,25 @@ function initHistoricoChart() {
         scales: { x: { time: false }, y: { range: [0, 20] } },
         series: [{}, { stroke: "#3b82f6", width: 1, points: { show: false }, fill: "rgba(59, 130, 246, 0.1)" }],
         axes: [
-            { 
-                grid: { stroke: "#374151" }, 
-                stroke: "#9ca3af", 
-                label: "Tiempo (s)", value: (u, v) => v.toFixed(1) + "s",
-                labelSize: 30 
-            }, 
-            { 
-                grid: { stroke: "#374151" }, 
-                stroke: "#9ca3af", 
-                label: "Amplitud (mm/s)", 
-                labelSize: 40 
+            {
+                grid: { stroke: "#374151" },
+                stroke: "#9ca3af",
+                label: "Tiempo",
+                font: "18px sans-serif",
+                labelFont: "bold 16px sans-serif",
+                size: 50,
+            },
+            {
+                grid: { stroke: "#374151" },
+                stroke: "#9ca3af",
+                label: "Vibración (mm/s)",
+                font: "18px sans-serif",
+                labelFont: "bold 16px sans-serif",
+                size: 70,
             }
         ],
-        cursor: { show: true }
+        cursor: { show: true },
+        hooks: { drawClear: [drawIsoZones] }
     };
     // Inicializar vacía
     chartDataHistorico[1].fill(0);
