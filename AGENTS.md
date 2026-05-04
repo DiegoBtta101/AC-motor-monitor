@@ -1,3 +1,9 @@
+---
+noteId: "c543b3d0476a11f1b9fbafe2b5f41c4e"
+tags: []
+
+---
+
 # 🤖 Project Context: VibSensor (Vibration & RPM Monitor)
 
 Sistema de monitoreo de condición para motores de corriente alterna (AC) con visualización en tiempo real y análisis histórico, optimizado para alta frecuencia de muestreo.
